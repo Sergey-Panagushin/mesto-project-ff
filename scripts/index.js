@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // @todo: DOM узлы
 const page = document.querySelector(".page");
 const pageContent = page.querySelector(".page__content");
