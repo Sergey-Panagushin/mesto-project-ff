@@ -1,7 +1,8 @@
 import "../styles/index.css";
-import { initialCards } from "./cards.js";
-import { createCard, onDelete, onLike } from "./card.js";
+import { createCard, onLike } from "./card.js";
 import { openPopup, closePopup } from "./modal.js";
+import { enableValidation } from "./validation.js";
+import { getUserMe, getCards, sendUserMe, sendCard, deleteCard, likeCard, dislikeCard, newAvatar } from "./api.js";
 
 // @todo: DOM узлы
 const formEdit = document.forms.edit_profile;
@@ -12,6 +13,7 @@ const pageContent = page.querySelector(".page__content");
 const mainContent = pageContent.querySelector(".content");
 const placeList = mainContent.querySelector(".places__list");
 
+const profileImage = mainContent.querySelector(".profile__image");
 const profileTitle = mainContent.querySelector(".profile__title");
 const profileJob = mainContent.querySelector(".profile__description");
 const nameInput = formEdit.elements.name;
@@ -41,12 +43,6 @@ popups.forEach((popup) => {
     });
 });
 
-// @todo: Вывести карточки на страницу
-initialCards.forEach(function (item) {
-    const cardElement = createCard(item["name"], item["link"], onDelete, onLike, openImage);
-    placeList.append(cardElement);
-});
-
 // @todo: Функция открытия изображения
 function openImage(name, link) {
     const popupImage = document.querySelector(".popup_type_image");
@@ -57,20 +53,32 @@ function openImage(name, link) {
     openPopup(popupImage);
 }
 
-// @todo: Получить данные формы редактирования
-function dataProfile() {
-    nameInput.value = profileTitle.textContent;
-    jobInput.value = profileJob.textContent;
-}
-
 // @todo: Функция редактирования профиля формы
 function editFormSubmit(evt) {
     evt.preventDefault();
 
-    profileTitle.textContent = nameInput.value;
-    profileJob.textContent = jobInput.value;
+    const nameInputValue = nameInput.value;
+    const jobValue = jobInput.value;
 
-    closePopup(popupEdit);
+    const buttonPopup = formEdit.elements.edit_button;
+    buttonPopup.textContent = "Сохранение...";
+
+    sendUserMe(nameInputValue, jobValue)
+        .then((user) => {
+            profileJob.textContent = user.about;
+            profileTitle.textContent = user.name;
+            profileImage.src = user.avatar;
+
+            closePopup(popupEdit);
+        })
+
+        .catch((err) => {
+            console.error("Ошибка при обновлении профиля:", err);
+        })
+
+        .finally(() => {
+            buttonPopup.textContent = "Сохранить";
+        });
 }
 
 // @todo: Функция добавления карточки формы
@@ -80,12 +88,25 @@ function newFormSubmit(evt) {
     const nameInput = formNew.elements.place_name.value;
     const jobInput = formNew.elements.link.value;
 
-    const cardElement = createCard(nameInput, jobInput, onDelete, onLike, openImage);
+    const buttonPopup = formNew.elements.new_button;
+    buttonPopup.textContent = "Сохранение...";
 
-    placeList.prepend(cardElement);
+    sendCard(nameInput, jobInput)
+        .then((item) => {
+            const cardElement = createCard(item["name"], item["link"], item["likes"], item["owner"], onDelete, onLike, openImage, item["_id"]);
+            placeList.prepend(cardElement);
 
-    closePopup(popupNew);
-    formNew.reset();
+            closePopup(popupNew);
+
+            formNew.reset();
+        })
+
+        .catch((err) => {
+            console.error("Ошибка при добавлении карточки:", err);
+        })
+        .finally(() => {
+            buttonPopup.textContent = "Сохранить";
+        });
 }
 
 // @todo: Кнопка редактирования профиля
@@ -95,7 +116,52 @@ formEdit.addEventListener("submit", editFormSubmit);
 formNew.addEventListener("submit", newFormSubmit);
 
 // @todo: Кнопка редактирования профиля
-editButton.addEventListener("click", () => openPopup(popupEdit), dataProfile());
+editButton.addEventListener("click", () => openPopup(popupEdit));
 
 // @todo: Кнопка добавления новой карточки
 addButton.addEventListener("click", () => openPopup(popupNew));
+
+// @todo: Валидация форм
+const settingValidtion = {
+    formSelector: ".popup__form",
+    inputSelector: ".popup__input",
+    submitButtonSelector: ".popup__button",
+    inactiveButtonClass: "popup__button_disabled",
+    inputErrorClass: "popup__input_type_error",
+    errorClass: "popup__error_visible",
+};
+
+enableValidation(settingValidtion);
+
+// @todo: Получение данных карточек и профиля с сервера
+
+Promise.all([getUserMe(), getCards()])
+
+    .then(([user, cards]) => {
+        profileTitle.textContent = user.name;
+        profileJob.textContent = user.about;
+        profileImage.src = user.avatar;
+
+        nameInput.value = profileTitle.textContent;
+        jobInput.value = profileJob.textContent;
+        const idUser = user._id;
+        // @todo: Вывести карточки на страницу
+        cards.forEach(function (item) {
+            const cardElement = createCard(item["name"], item["link"], item["likes"], item["owner"], onDelete, onLike, openImage, idUser);
+            placeList.append(cardElement);
+        });
+    })
+    .catch((err) => {
+        console.error("Ошибка при загрузке данных:", err);
+    });
+
+// @todo: Функция удаления карточки
+function onDelete(cardElement, cardId) {
+    deleteCard(cardId)
+        .then(() => {
+            cardElement.remove();
+        })
+        .catch((err) => {
+            console.error("Ошибка при удалении карточки:", err);
+        });
+}
