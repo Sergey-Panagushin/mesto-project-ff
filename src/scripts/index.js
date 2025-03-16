@@ -1,19 +1,20 @@
 import "../styles/index.css";
-import { createCard, onLike } from "./card.js";
+import { createCard, onLike, onDelete} from "./card.js";
 import { openPopup, closePopup } from "./modal.js";
 import { enableValidation } from "./validation.js";
-import { getUserMe, getCards, sendUserMe, sendCard, deleteCard, likeCard, dislikeCard, newAvatar } from "./api.js";
+import { getUserMe, getCards, sendUserMe, sendCard, newAvatar } from "./api.js";
 
 // @todo: DOM узлы
 const formEdit = document.forms.edit_profile;
 const formNew = document.forms.new_place;
+const formEditAvatar = document.forms.edit_avatar;
 
 const page = document.querySelector(".page");
 const pageContent = page.querySelector(".page__content");
 const mainContent = pageContent.querySelector(".content");
 const placeList = mainContent.querySelector(".places__list");
 
-const profileImage = mainContent.querySelector(".profile__image");
+const profileImage = mainContent.querySelector(".profile__image_avatar  ");
 const profileTitle = mainContent.querySelector(".profile__title");
 const profileJob = mainContent.querySelector(".profile__description");
 const nameInput = formEdit.elements.name;
@@ -22,7 +23,9 @@ const jobInput = formEdit.elements.description;
 const popups = document.querySelectorAll(".popup");
 const popupEdit = pageContent.querySelector(".popup_type_edit");
 const popupNew = pageContent.querySelector(".popup_type_new-card");
+const popupEditAvatar = pageContent.querySelector(".popup_type_edit_avatar");
 
+const avatarOpenButton = mainContent.querySelector(".profile__image");
 const editButton = mainContent.querySelector(".profile__edit-button");
 const addButton = mainContent.querySelector(".profile__add-button");
 
@@ -67,7 +70,6 @@ function editFormSubmit(evt) {
         .then((user) => {
             profileJob.textContent = user.about;
             profileTitle.textContent = user.name;
-            profileImage.src = user.avatar;
 
             closePopup(popupEdit);
         })
@@ -93,7 +95,7 @@ function newFormSubmit(evt) {
 
     sendCard(nameInput, jobInput)
         .then((item) => {
-            const cardElement = createCard(item["name"], item["link"], item["likes"], item["owner"], onDelete, onLike, openImage, item["_id"]);
+            const cardElement = createCard(item, onDelete, onLike, openImage, item["_id"]);
             placeList.prepend(cardElement);
 
             closePopup(popupNew);
@@ -109,17 +111,50 @@ function newFormSubmit(evt) {
         });
 }
 
-// @todo: Кнопка редактирования профиля
+// @todo: Функция обновления аватарки
+function updateAvatar(evt) {
+    evt.preventDefault();
+
+    const avatarUrlInput = formEditAvatar.elements.link;
+
+    const avatarUrl = avatarUrlInput.value;
+
+    if (avatarUrl) {
+        const submitButton = formEditAvatar.elements.edit_avatar_button;
+        submitButton.textContent = "Сохранение...";
+
+        newAvatar(avatarUrl)
+            .then((userData) => {
+                profileImage.src = userData.avatar;
+                closePopup(popupEditAvatar);
+                formEditAvatar.reset();
+            })
+            .catch((err) => {
+                console.error("Ошибка при обновлении аватара:", err);
+            })
+            .finally(() => {
+                submitButton.textContent = "Сохранить";
+            });
+    }
+}
+
+// @todo: Кнопка сабмита обновления аватарки
+formEditAvatar.addEventListener("submit", updateAvatar);
+
+// @todo: Кнопка сабмита редактирования профиля
 formEdit.addEventListener("submit", editFormSubmit);
 
-// @todo: Кнопка сохранения новой карточки
+// @todo: Кнопка сабмита сохранения новой карточки
 formNew.addEventListener("submit", newFormSubmit);
 
-// @todo: Кнопка редактирования профиля
+// @todo: Кнопка открытия попапа редактирования профиля
 editButton.addEventListener("click", () => openPopup(popupEdit));
 
-// @todo: Кнопка добавления новой карточки
+// @todo: Кнопка открытия попапа добавления новой карточки
 addButton.addEventListener("click", () => openPopup(popupNew));
+
+// @todo: Кнопка открытия попапа редактирования аватарки
+avatarOpenButton.addEventListener("click", () => openPopup(popupEditAvatar));
 
 // @todo: Валидация форм
 const settingValidtion = {
@@ -134,7 +169,6 @@ const settingValidtion = {
 enableValidation(settingValidtion);
 
 // @todo: Получение данных карточек и профиля с сервера
-
 Promise.all([getUserMe(), getCards()])
 
     .then(([user, cards]) => {
@@ -145,9 +179,10 @@ Promise.all([getUserMe(), getCards()])
         nameInput.value = profileTitle.textContent;
         jobInput.value = profileJob.textContent;
         const idUser = user._id;
+
         // @todo: Вывести карточки на страницу
         cards.forEach(function (item) {
-            const cardElement = createCard(item["name"], item["link"], item["likes"], item["owner"], onDelete, onLike, openImage, idUser);
+            const cardElement = createCard(item, onDelete, onLike, openImage, idUser);
             placeList.append(cardElement);
         });
     })
@@ -155,13 +190,4 @@ Promise.all([getUserMe(), getCards()])
         console.error("Ошибка при загрузке данных:", err);
     });
 
-// @todo: Функция удаления карточки
-function onDelete(cardElement, cardId) {
-    deleteCard(cardId)
-        .then(() => {
-            cardElement.remove();
-        })
-        .catch((err) => {
-            console.error("Ошибка при удалении карточки:", err);
-        });
-}
+
