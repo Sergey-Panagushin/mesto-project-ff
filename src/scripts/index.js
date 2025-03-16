@@ -95,7 +95,8 @@ function newFormSubmit(evt) {
 
     sendCard(nameInput, jobInput)
         .then((item) => {
-            const cardElement = createCard(item, onDelete, onLike, openImage, item["_id"]);
+            const idUser = item.owner._id;
+            const cardElement = createCard(item, onDelete, onLike, openImage, idUser);
             placeList.prepend(cardElement);
 
             closePopup(popupNew);
