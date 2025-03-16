@@ -23,7 +23,7 @@ const hideInputError = (formElement, inputElement, settingValidtion) => {
 const isValid = (formElement, inputElement, settingValidtion) => {
   
   if (inputElement.validity.patternMismatch) {
-  inputElement.setCustomValidity("Разрешены только латинские и кириллические буквы, знаки дефиса и пробелы.");
+  inputElement.setCustomValidity(inputElement.dataset.errorMessage);
 } else {
   inputElement.setCustomValidity("");
 }
@@ -75,3 +75,15 @@ const toggleButtonState = (inputList, buttonElement, settingValidtion) => {
       buttonElement.classList.remove(settingValidtion.inactiveButtonClass);
     }
   }; 
+
+
+export  function clearValidation(form, settingValidtion) {
+    const inputs = Array.from(form.querySelectorAll(settingValidtion.inputSelector));
+    const submitButton = form.querySelector(settingValidtion.submitButtonSelector);
+  
+    inputs.forEach((input) => {
+      hideInputError(form, input, settingValidtion);
+    });
+  
+    toggleButtonState(inputs, submitButton, settingValidtion);
+}

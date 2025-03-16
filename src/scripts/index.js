@@ -1,7 +1,7 @@
 import "../styles/index.css";
 import { createCard, onLike, onDelete} from "./card.js";
 import { openPopup, closePopup } from "./modal.js";
-import { enableValidation } from "./validation.js";
+import { enableValidation, clearValidation } from "./validation.js";
 import { getUserMe, getCards, sendUserMe, sendCard, newAvatar } from "./api.js";
 
 // @todo: DOM узлы
@@ -149,13 +149,24 @@ formEdit.addEventListener("submit", editFormSubmit);
 formNew.addEventListener("submit", newFormSubmit);
 
 // @todo: Кнопка открытия попапа редактирования профиля
-editButton.addEventListener("click", () => openPopup(popupEdit));
+editButton.addEventListener("click", () => {
+    clearValidation(formEdit, settingValidtion);
+    nameInput.value = profileTitle.textContent;
+    jobInput.value = profileJob.textContent;
+    openPopup(popupEdit);
+});
 
 // @todo: Кнопка открытия попапа добавления новой карточки
-addButton.addEventListener("click", () => openPopup(popupNew));
+addButton.addEventListener("click", () => {
+    clearValidation(formNew, settingValidtion);
+    openPopup(popupNew)
+});
 
 // @todo: Кнопка открытия попапа редактирования аватарки
-avatarOpenButton.addEventListener("click", () => openPopup(popupEditAvatar));
+avatarOpenButton.addEventListener("click", () => {
+    clearValidation(formEditAvatar, settingValidtion);
+    openPopup(popupEditAvatar)
+});
 
 // @todo: Валидация форм
 const settingValidtion = {
@@ -177,9 +188,7 @@ Promise.all([getUserMe(), getCards()])
         profileJob.textContent = user.about;
         profileImage.src = user.avatar;
 
-        nameInput.value = profileTitle.textContent;
-        jobInput.value = profileJob.textContent;
-        const idUser = user._id;
+        const idUser = user._id;            
 
         // @todo: Вывести карточки на страницу
         cards.forEach(function (item) {
