@@ -150,9 +150,9 @@ formNew.addEventListener("submit", newFormSubmit);
 
 // @todo: Кнопка открытия попапа редактирования профиля
 editButton.addEventListener("click", () => {
-    clearValidation(formEdit, settingValidtion);
     nameInput.value = profileTitle.textContent;
     jobInput.value = profileJob.textContent;
+    clearValidation(formEdit, settingValidtion);
     openPopup(popupEdit);
 });
 
